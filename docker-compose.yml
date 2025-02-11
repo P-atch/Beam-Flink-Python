@@ -1,0 +1,47 @@
+# Note: We are forced to use network host, because beam_flink will always pass localhost URLs to beam_python.
+
+version: "2.2"
+services:
+  jobmanager:
+    image: flink:1.18.1-scala_2.12-java8
+    command: jobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: localhost
+    network_mode: host
+    volumes:
+      - beam-tmp:/tmp
+
+  taskmanager:
+    image: flink:1.18.1-scala_2.12-java8
+    depends_on:
+      - jobmanager
+    command: taskmanager
+    scale: 1
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: localhost
+        taskmanager.numberOfTaskSlots: 2
+    network_mode: host
+    volumes:
+      - beam-tmp:/tmp
+  beam-flink:
+    image: apache/beam_flink1.18_job_server
+    command: ["--flink-master=localhost:8081"]
+    network_mode: host
+    volumes:
+      - beam-tmp:/tmp
+
+  beam-python:
+    image: apache/beam_python3.12_sdk:2.62.0
+    network_mode: host
+    ports:
+      - "50000:50000"   # beam_flink send job here
+    command: ["--worker_pool"]
+    volumes:
+      - beam-tmp:/tmp
+
+volumes:
+  beam-tmp:
